@@ -1,0 +1,317 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="quadruped">
+
+  <!-- ===================================================================== -->
+  <!-- [USER PARAMETERS]: EDIT CHASSIS & LINK DIMENSIONS, MASSES & MESH PATHS -->
+  <!-- SPIDER / CRAWLER 12-DOF CONFIGURATION (Radial Outward Legs)            -->
+  <!-- ===================================================================== -->
+
+  <!-- Set to 'true' once you place STL files in quadruped_description/meshes/ -->
+  <xacro:property name="use_mesh_visuals" value="true" />
+
+  <!-- Base / Central Chassis Dimensions (meters) & Mass (kg) -->
+  <!-- USER EDIT: Center hub measurements -->
+  <xacro:property name="body_length"  value="0.097" />
+  <xacro:property name="body_width"   value="0.097" />
+  <xacro:property name="body_height"  value="0.017" />
+  <xacro:property name="body_mass"    value="0.240" />  <!-- Central frame, battery, controller -->
+
+  <!-- Leg Mount Radius & Radial Offsets from Center -->
+  <!-- Base is 97mm x 97mm. Hip yaw servo shafts are located at +/- 30mm, +/- 30mm -->
+  <xacro:property name="mount_x"      value="0.030" />
+  <xacro:property name="mount_y"      value="0.030" />
+
+  <!-- Coxa / Hip Link Dimensions (meters) & Mass (kg) -->
+  <!-- Extrapolated from CAD top-view: joint-to-joint length = 40.0mm (Hip Yaw to Thigh Pitch) -->
+  <xacro:property name="coxa_length"  value="0.040" />
+  <xacro:property name="coxa_width"   value="0.021" />
+  <xacro:property name="coxa_height"  value="0.038" />
+  <xacro:property name="coxa_mass"    value="0.066" />  <!-- U-bracket + 1x MG995/MG996 servo (~55g) -->
+
+  <!-- Thigh / Upper Leg Link Dimensions (meters) & Mass (kg) -->
+  <!-- Onshape CAD extracted: bar length = 104mm, height = 24mm, hole-to-hole = 75mm -->
+  <xacro:property name="thigh_length" value="0.075" />
+  <xacro:property name="thigh_width"  value="0.055" />
+  <xacro:property name="thigh_height" value="0.024" />
+  <xacro:property name="thigh_mass"   value="0.081" />  <!-- H-frame + 1x MG995 knee servo (~55g) -->
+
+  <!-- Calf / Lower Leg Link / Tibia Dimensions (meters) & Mass (kg) -->
+  <!-- Onshape CAD extracted: knee axis to foot tip = 80mm, max height = 26mm, thickness = 11mm -->
+  <xacro:property name="calf_length"  value="0.080" />
+  <xacro:property name="calf_width"   value="0.011" />
+  <xacro:property name="calf_height"  value="0.026" />
+  <xacro:property name="calf_mass"    value="0.0635" />  <!-- 3D printed pointed horn -->
+
+  <!-- Foot Contact Tip -->
+  <xacro:property name="foot_radius"  value="0.010" />
+  <xacro:property name="foot_mass"    value="0.008" />
+
+  <!-- Joint Limits for Spider Configuration (radians) -->
+  <!-- Hip Yaw: Sweeps horizontally +/- 45 deg (+/- 0.8 rad) -->
+  <xacro:property name="hip_yaw_lower"     value="-0.80" />
+  <xacro:property name="hip_yaw_upper"     value="0.80" />
+  <!-- Thigh Pitch: 0 = flat horizontal (as in photo), >0 = tilts downward -->
+  <xacro:property name="thigh_pitch_lower" value="-0.60" />
+  <xacro:property name="thigh_pitch_upper" value="1.30" />
+  <!-- Knee Pitch: 0 = straight in line with thigh, >0 = bends downward -->
+  <xacro:property name="knee_pitch_lower"  value="-0.40" />
+  <xacro:property name="knee_pitch_upper"  value="2.00" />
+
+  <xacro:property name="servo_max_velocity" value="6.0" />  <!-- MG996R ~0.17s/60 deg = 6.1 rad/s -->
+  <xacro:property name="servo_max_effort"   value="1.0" />  <!-- MG996R ~10 kg.cm = ~1.0 Nm stall -->
+
+  <!-- Mesh File Locations (Relative to quadruped_description/meshes/) -->
+  <!-- USER EDIT: Modify file names if your STL files have different names -->
+  <xacro:property name="mesh_body"  value="package://quadruped_description/meshes/CentralFrame.stl" />
+  <xacro:property name="mesh_hip"   value="package://quadruped_description/meshes/Fema.stl" />
+  <xacro:property name="mesh_thigh" value="package://quadruped_description/meshes/Shin.stl" />
+  <xacro:property name="mesh_calf"  value="package://quadruped_description/meshes/Foot.stl" />
+  <xacro:property name="mesh_foot"  value="package://quadruped_description/meshes/foot.stl" />
+
+  <!-- Visual Materials -->
+  <material name="chassis_white">
+    <color rgba="0.92 0.92 0.92 1.0"/>
+  </material>
+  <material name="servo_black">
+    <color rgba="0.15 0.15 0.15 1.0"/>
+  </material>
+  <material name="accent_gray">
+    <color rgba="0.70 0.70 0.70 1.0"/>
+  </material>
+  <material name="rubber_black">
+    <color rgba="0.10 0.10 0.10 1.0"/>
+  </material>
+
+  <!-- ===================================================================== -->
+  <!-- BASE FOOTPRINT & BASE LINK (Central Spider Hub)                       -->
+  <!-- ===================================================================== -->
+  <link name="base_footprint"/>
+
+  <joint name="base_footprint_joint" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0.12" rpy="0 0 0"/>
+  </joint>
+
+  <link name="base_link">
+    <visual>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <xacro:if value="${use_mesh_visuals}">
+          <mesh filename="${mesh_body}" scale="1 1 1"/>
+        </xacro:if>
+        <xacro:unless value="${use_mesh_visuals}">
+          <box size="${body_length} ${body_width} ${body_height}"/>
+        </xacro:unless>
+      </geometry>
+      <material name="chassis_white"/>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <geometry>
+        <box size="${body_length} ${body_width} ${body_height}"/>
+      </geometry>
+    </collision>
+    <inertial>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+      <mass value="${body_mass}"/>
+      <inertia ixx="${(1.0/12.0) * body_mass * (body_width*body_width + body_height*body_height)}"
+               ixy="0.0" ixz="0.0"
+               iyy="${(1.0/12.0) * body_mass * (body_length*body_length + body_height*body_height)}"
+               iyz="0.0"
+               izz="${(1.0/12.0) * body_mass * (body_length*body_length + body_width*body_width)}"/>
+    </inertial>
+  </link>
+
+  <!-- IMU Sensor Link at Chassis Geometric Center -->
+  <link name="imu_link"/>
+  <joint name="imu_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="imu_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- ===================================================================== -->
+  <!-- SPIDER 3-DOF LEG MACRO (Radial Outward Kinematics)                    -->
+  <!-- In the local leg frame:                                               -->
+  <!--   +X: Radially OUTWARD along the leg                                  -->
+  <!--   +Y: Horizontal tangential (perpendicular to leg)                   -->
+  <!--   +Z: Upward                                                          -->
+  <!-- ===================================================================== -->
+  <xacro:macro name="spider_leg_3dof" params="prefix mount_x mount_y yaw_angle">
+
+    <!-- 1. Hip Yaw Joint: Rotates horizontally around local Z axis -->
+    <joint name="${prefix}_hip_joint" type="revolute">
+      <parent link="base_link"/>
+      <child link="${prefix}_hip_link"/>
+      <origin xyz="${mount_x} ${mount_y} 0.0" rpy="0 0 ${yaw_angle}"/>
+      <axis xyz="0 0 1"/>
+      <limit lower="${hip_yaw_lower}" upper="${hip_yaw_upper}"
+             velocity="${servo_max_velocity}" effort="${servo_max_effort}"/>
+      <dynamics damping="0.05" friction="0.02"/>
+    </joint>
+
+    <!-- Hip / Coxa Bracket Link: Extends radially outward along +X -->
+    <link name="${prefix}_hip_link">
+      <visual>
+        <origin xyz="${coxa_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <xacro:if value="${use_mesh_visuals}">
+            <mesh filename="${mesh_hip}" scale="1 1 1"/>
+          </xacro:if>
+          <xacro:unless value="${use_mesh_visuals}">
+            <box size="${coxa_length} ${coxa_width} ${coxa_height}"/>
+          </xacro:unless>
+        </geometry>
+        <material name="servo_black"/>
+      </visual>
+      <collision>
+        <origin xyz="${coxa_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="${coxa_length} ${coxa_width} ${coxa_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${coxa_length/2.0} 0 0" rpy="0 0 0"/>
+        <mass value="${coxa_mass}"/>
+        <inertia ixx="${(1.0/12.0) * coxa_mass * (coxa_width*coxa_width + coxa_height*coxa_height)}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(1.0/12.0) * coxa_mass * (coxa_length*coxa_length + coxa_height*coxa_height)}"
+                 iyz="0.0"
+                 izz="${(1.0/12.0) * coxa_mass * (coxa_length*coxa_length + coxa_width*coxa_width)}"/>
+      </inertial>
+    </link>
+
+    <!-- 2. Thigh Pitch Joint: Rotates around local Y axis (perpendicular to leg) -->
+    <!-- Positive rotation rotates the thigh DOWNWARD towards the ground          -->
+    <joint name="${prefix}_thigh_joint" type="revolute">
+      <parent link="${prefix}_hip_link"/>
+      <child link="${prefix}_thigh_link"/>
+      <origin xyz="${coxa_length} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${thigh_pitch_lower}" upper="${thigh_pitch_upper}"
+             velocity="${servo_max_velocity}" effort="${servo_max_effort}"/>
+      <dynamics damping="0.05" friction="0.02"/>
+    </joint>
+
+    <!-- Thigh / Upper Leg Link: Extends radially outward along +X -->
+    <link name="${prefix}_thigh_link">
+      <visual>
+        <origin xyz="${thigh_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <xacro:if value="${use_mesh_visuals}">
+            <mesh filename="${mesh_thigh}" scale="1 1 1"/>
+          </xacro:if>
+          <xacro:unless value="${use_mesh_visuals}">
+            <box size="${thigh_length} ${thigh_width} ${thigh_height}"/>
+          </xacro:unless>
+        </geometry>
+        <material name="chassis_white"/>
+      </visual>
+      <collision>
+        <origin xyz="${thigh_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="${thigh_length} ${thigh_width} ${thigh_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${thigh_length/2.0} 0 0" rpy="0 0 0"/>
+        <mass value="${thigh_mass}"/>
+        <inertia ixx="${(1.0/12.0) * thigh_mass * (thigh_width*thigh_width + thigh_height*thigh_height)}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(1.0/12.0) * thigh_mass * (thigh_length*thigh_length + thigh_height*thigh_height)}"
+                 iyz="0.0"
+                 izz="${(1.0/12.0) * thigh_mass * (thigh_length*thigh_length + thigh_width*thigh_width)}"/>
+      </inertial>
+    </link>
+
+    <!-- 3. Knee Pitch Joint: Rotates around local Y axis (parallel to thigh joint) -->
+    <!-- Positive rotation rotates the calf DOWNWARD towards the ground            -->
+    <joint name="${prefix}_knee_joint" type="revolute">
+      <parent link="${prefix}_thigh_link"/>
+      <child link="${prefix}_calf_link"/>
+      <origin xyz="${thigh_length} 0 0" rpy="0 0 0"/>
+      <axis xyz="0 1 0"/>
+      <limit lower="${knee_pitch_lower}" upper="${knee_pitch_upper}"
+             velocity="${servo_max_velocity}" effort="${servo_max_effort}"/>
+      <dynamics damping="0.05" friction="0.02"/>
+    </joint>
+
+    <!-- Calf / Lower Leg Link: Extends radially outward along +X -->
+    <link name="${prefix}_calf_link">
+      <visual>
+        <origin xyz="${calf_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <xacro:if value="${use_mesh_visuals}">
+            <mesh filename="${mesh_calf}" scale="1 1 1"/>
+          </xacro:if>
+          <xacro:unless value="${use_mesh_visuals}">
+            <box size="${calf_length} ${calf_width} ${calf_height}"/>
+          </xacro:unless>
+        </geometry>
+        <material name="accent_gray"/>
+      </visual>
+      <collision>
+        <origin xyz="${calf_length/2.0} 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="${calf_length} ${calf_width} ${calf_height}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="${calf_length/2.0} 0 0" rpy="0 0 0"/>
+        <mass value="${calf_mass}"/>
+        <inertia ixx="${(1.0/12.0) * calf_mass * (calf_width*calf_width + calf_height*calf_height)}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(1.0/12.0) * calf_mass * (calf_length*calf_length + calf_height*calf_height)}"
+                 iyz="0.0"
+                 izz="${(1.0/12.0) * calf_mass * (calf_length*calf_length + calf_width*calf_width)}"/>
+      </inertial>
+    </link>
+
+    <!-- Foot Tip Sphere (Contact with Ground) -->
+    <joint name="${prefix}_foot_joint" type="fixed">
+      <parent link="${prefix}_calf_link"/>
+      <child link="${prefix}_foot_link"/>
+      <origin xyz="${calf_length} 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <link name="${prefix}_foot_link">
+      <visual>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${foot_radius}"/>
+        </geometry>
+        <material name="rubber_black"/>
+      </visual>
+      <collision>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <sphere radius="${foot_radius}"/>
+        </geometry>
+      </collision>
+      <inertial>
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <mass value="${foot_mass}"/>
+        <inertia ixx="${(2.0/5.0) * foot_mass * foot_radius * foot_radius}"
+                 ixy="0.0" ixz="0.0"
+                 iyy="${(2.0/5.0) * foot_mass * foot_radius * foot_radius}"
+                 iyz="0.0"
+                 izz="${(2.0/5.0) * foot_mass * foot_radius * foot_radius}"/>
+      </inertial>
+    </link>
+  </xacro:macro>
+
+  <!-- ===================================================================== -->
+  <!-- INSTANTIATE THE 4 LEGS IN RADIAL SPIDER X-CONFIGURATION              -->
+  <!-- Angles: FL = +45 deg (0.7854 rad), FR = -45 deg (-0.7854 rad)         -->
+  <!--         RL = +135 deg (2.3562 rad), RR = -135 deg (-2.3562 rad)       -->
+  <!-- ===================================================================== -->
+  <xacro:spider_leg_3dof prefix="fl" mount_x="${mount_x}"  mount_y="${mount_y}"   yaw_angle="0.7854"  />
+  <xacro:spider_leg_3dof prefix="fr" mount_x="${mount_x}"  mount_y="${-mount_y}"  yaw_angle="-0.7854" />
+  <xacro:spider_leg_3dof prefix="rl" mount_x="${-mount_x}" mount_y="${mount_y}"   yaw_angle="2.3562"  />
+  <xacro:spider_leg_3dof prefix="rr" mount_x="${-mount_x}" mount_y="${-mount_y}"  yaw_angle="-2.3562" />
+
+  <!-- Include ros2_control configuration -->
+  <xacro:include filename="ros2_control.xacro"/>
+
+</robot>

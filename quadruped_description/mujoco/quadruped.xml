@@ -1,0 +1,239 @@
+<mujoco model="spider_quadruped_12dof">
+  <!--
+    =============================================================================
+    [USER PARAMETERS & MESH INTEGRATION GUIDE - SPIDER 12-DOF QUADRUPED]
+    Extracted from Onshape CAD (Top & Side Views):
+    - Base Chassis: 97mm x 97mm x 17mm, Mass = 0.24 kg
+    - Hip Yaw Servo Mounts: +/- 30mm, +/- 30mm (Radius = 42.4mm at +/- 45 deg, +/- 135 deg)
+    - Coxa Joint-to-Joint Distance (Hip Yaw -> Thigh Pitch): 40.0mm (0.040m), Width = 21mm, Mass = 0.10 kg
+    - Thigh Link (H-frame) Joint-to-Joint Distance: 75.0mm (0.075m), Bar length = 104mm, Height = 24mm, Mass = 0.095 kg
+    - Calf/Shin Link (Knee Pitch -> Foot Tip): 80.0mm (0.080m), Max height = 26mm, Thickness = 11mm, Mass = 0.035 kg
+    - Foot Tip Sphere: Radius = 10.0mm (0.010m), Mass = 0.008 kg
+    - Total Extended Leg Reach (Hip Yaw axis -> Foot Tip): 195.0mm (0.195m)
+    - Actuators: 12x MG995 (Stall torque ~1.0 Nm, Max velocity ~6.0 rad/s)
+    =============================================================================
+  -->
+
+  <compiler angle="radian" coordinate="local" meshdir="../meshes" autolimits="true"/>
+
+  <option timestep="0.002" iterations="50" solver="Newton" tolerance="1e-10" gravity="0 0 -9.81">
+    <flag contact="enable" energy="enable"/>
+  </option>
+
+  <default>
+    <joint limited="true" damping="0.05" armature="0.01" frictionloss="0.02"/>
+    <geom contype="1" conaffinity="1" condim="3" friction="1.2 0.005 0.0001"/>
+    <!-- Position actuator defaults matching MG995 hobby servo response -->
+    <position kp="18.0" kv="0.6" forcerange="-1.0 1.0"/>
+  </default>
+
+  <visual>
+    <headlight ambient="0.4 0.4 0.4" diffuse="0.8 0.8 0.8" specular="0.1 0.1 0.1"/>
+    <rgba haze="0.15 0.25 0.35 1"/>
+    <global offwidth="1280" offheight="720"/>
+    <quality shadowsize="2048"/>
+  </visual>
+
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.3 0.5 0.7" rgb2="0 0 0" width="512" height="3072"/>
+    <texture name="ground_plane" type="2d" builtin="checker" rgb1="0.2 0.25 0.3" rgb2="0.3 0.35 0.4" width="512" height="512" mark="edge" markrgb="0.8 0.8 0.8"/>
+    <material name="ground_mat" texture="ground_plane" texrepeat="20 20" reflectance="0.1"/>
+    
+    <material name="mat_chassis" rgba="0.92 0.92 0.92 1.0" specular="0.3" shininess="0.2"/>
+    <material name="mat_servo" rgba="0.15 0.15 0.15 1.0" specular="0.4" shininess="0.3"/>
+    <material name="mat_thigh" rgba="0.92 0.92 0.92 1.0" specular="0.3" shininess="0.2"/>
+    <material name="mat_calf" rgba="0.75 0.75 0.75 1.0" specular="0.3" shininess="0.2"/>
+    <material name="mat_foot" rgba="0.1 0.1 0.1 1.0" specular="0.1" shininess="0.0"/>
+
+    <!-- [USER MESH ASSETS PLACEHOLDER] Uncomment and adjust when STLs are added -->
+    <!--
+    <mesh name="mesh_body"  file="body.stl"  scale="0.001 0.001 0.001"/>
+    <mesh name="mesh_hip"   file="hip.stl"   scale="0.001 0.001 0.001"/>
+    <mesh name="mesh_thigh" file="thigh.stl" scale="0.001 0.001 0.001"/>
+    <mesh name="mesh_calf"  file="calf.stl"  scale="0.001 0.001 0.001"/>
+    -->
+  </asset>
+
+  <worldbody>
+    <light directional="true" diffuse="0.8 0.8 0.8" specular="0.2 0.2 0.2" pos="0 0 5" dir="0 0 -1"/>
+    <geom name="floor" type="plane" size="0 0 0.05" material="ground_mat" condim="3" friction="1.2 0.005 0.0001"/>
+
+    <!-- Floating Base Chassis (97mm x 97mm x 17mm) -->
+    <body name="base_link" pos="0 0 0.12">
+      <freejoint name="root"/>
+      <site name="imu_site" pos="0 0 0"/>
+      <geom name="body_geom" type="box" size="0.0485 0.0485 0.0085" mass="0.24" material="mat_chassis"/>
+
+      <!-- ================= FRONT LEFT LEG (FL: +45 deg) ================= -->
+      <body name="fl_hip" pos="0.030 0.030 0" euler="0 0 0.7854">
+        <!-- Joint 1: Hip Yaw (axis 0 0 1) -->
+        <joint name="fl_hip_joint" type="hinge" axis="0 0 1" range="-0.80 0.80"/>
+        <geom name="fl_hip_geom" type="box" pos="0.020 0 0" size="0.020 0.0105 0.019" mass="0.10" material="mat_servo"/>
+
+        <body name="fl_thigh" pos="0.040 0 0">
+          <!-- Joint 2: Thigh Pitch (axis 0 1 0, rotating outward & downward, 75mm length) -->
+          <joint name="fl_thigh_joint" type="hinge" axis="0 1 0" range="-0.60 1.30"/>
+          <geom name="fl_thigh_geom" type="capsule" fromto="0 0 0 0.075 0 0" size="0.015" mass="0.095" material="mat_thigh"/>
+
+          <body name="fl_calf" pos="0.075 0 0">
+            <!-- Joint 3: Knee Pitch (axis 0 1 0, 80mm length to foot tip) -->
+            <joint name="fl_knee_joint" type="hinge" axis="0 1 0" range="-0.40 2.00"/>
+            <geom name="fl_calf_geom" type="capsule" fromto="0 0 0 0.080 0 0" size="0.012" mass="0.035" material="mat_calf"/>
+
+            <body name="fl_foot" pos="0.080 0 0">
+              <geom name="fl_foot_geom" type="sphere" size="0.010" mass="0.008" material="mat_foot" friction="1.2 0.005 0.0001"/>
+              <site name="fl_foot_site" pos="0 0 0" size="0.010"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= FRONT RIGHT LEG (FR: -45 deg) ================= -->
+      <body name="fr_hip" pos="0.030 -0.030 0" euler="0 0 -0.7854">
+        <!-- Joint 1: Hip Yaw (axis 0 0 1) -->
+        <joint name="fr_hip_joint" type="hinge" axis="0 0 1" range="-0.80 0.80"/>
+        <geom name="fr_hip_geom" type="box" pos="0.020 0 0" size="0.020 0.0105 0.019" mass="0.10" material="mat_servo"/>
+
+        <body name="fr_thigh" pos="0.040 0 0">
+          <!-- Joint 2: Thigh Pitch (axis 0 1 0, 75mm length) -->
+          <joint name="fr_thigh_joint" type="hinge" axis="0 1 0" range="-0.60 1.30"/>
+          <geom name="fr_thigh_geom" type="capsule" fromto="0 0 0 0.075 0 0" size="0.015" mass="0.095" material="mat_thigh"/>
+
+          <body name="fr_calf" pos="0.075 0 0">
+            <!-- Joint 3: Knee Pitch (axis 0 1 0, 80mm length) -->
+            <joint name="fr_knee_joint" type="hinge" axis="0 1 0" range="-0.40 2.00"/>
+            <geom name="fr_calf_geom" type="capsule" fromto="0 0 0 0.080 0 0" size="0.012" mass="0.035" material="mat_calf"/>
+
+            <body name="fr_foot" pos="0.080 0 0">
+              <geom name="fr_foot_geom" type="sphere" size="0.010" mass="0.008" material="mat_foot" friction="1.2 0.005 0.0001"/>
+              <site name="fr_foot_site" pos="0 0 0" size="0.010"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= REAR LEFT LEG (RL: +135 deg) ================= -->
+      <body name="rl_hip" pos="-0.030 0.030 0" euler="0 0 2.3562">
+        <!-- Joint 1: Hip Yaw (axis 0 0 1) -->
+        <joint name="rl_hip_joint" type="hinge" axis="0 0 1" range="-0.80 0.80"/>
+        <geom name="rl_hip_geom" type="box" pos="0.020 0 0" size="0.020 0.0105 0.019" mass="0.10" material="mat_servo"/>
+
+        <body name="rl_thigh" pos="0.040 0 0">
+          <!-- Joint 2: Thigh Pitch (axis 0 1 0, 75mm length) -->
+          <joint name="rl_thigh_joint" type="hinge" axis="0 1 0" range="-0.60 1.30"/>
+          <geom name="rl_thigh_geom" type="capsule" fromto="0 0 0 0.075 0 0" size="0.015" mass="0.095" material="mat_thigh"/>
+
+          <body name="rl_calf" pos="0.075 0 0">
+            <!-- Joint 3: Knee Pitch (axis 0 1 0, 80mm length) -->
+            <joint name="rl_knee_joint" type="hinge" axis="0 1 0" range="-0.40 2.00"/>
+            <geom name="rl_calf_geom" type="capsule" fromto="0 0 0 0.080 0 0" size="0.012" mass="0.035" material="mat_calf"/>
+
+            <body name="rl_foot" pos="0.080 0 0">
+              <geom name="rl_foot_geom" type="sphere" size="0.010" mass="0.008" material="mat_foot" friction="1.2 0.005 0.0001"/>
+              <site name="rl_foot_site" pos="0 0 0" size="0.010"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+      <!-- ================= REAR RIGHT LEG (RR: -135 deg) ================= -->
+      <body name="rr_hip" pos="-0.030 -0.030 0" euler="0 0 -2.3562">
+        <!-- Joint 1: Hip Yaw (axis 0 0 1) -->
+        <joint name="rr_hip_joint" type="hinge" axis="0 0 1" range="-0.80 0.80"/>
+        <geom name="rr_hip_geom" type="box" pos="0.020 0 0" size="0.020 0.0105 0.019" mass="0.10" material="mat_servo"/>
+
+        <body name="rr_thigh" pos="0.040 0 0">
+          <!-- Joint 2: Thigh Pitch (axis 0 1 0, 75mm length) -->
+          <joint name="rr_thigh_joint" type="hinge" axis="0 1 0" range="-0.60 1.30"/>
+          <geom name="rr_thigh_geom" type="capsule" fromto="0 0 0 0.075 0 0" size="0.015" mass="0.095" material="mat_thigh"/>
+
+          <body name="rr_calf" pos="0.075 0 0">
+            <!-- Joint 3: Knee Pitch (axis 0 1 0, 80mm length) -->
+            <joint name="rr_knee_joint" type="hinge" axis="0 1 0" range="-0.40 2.00"/>
+            <geom name="rr_calf_geom" type="capsule" fromto="0 0 0 0.080 0 0" size="0.012" mass="0.035" material="mat_calf"/>
+
+            <body name="rr_foot" pos="0.080 0 0">
+              <geom name="rr_foot_geom" type="sphere" size="0.010" mass="0.008" material="mat_foot" friction="1.2 0.005 0.0001"/>
+              <site name="rr_foot_site" pos="0 0 0" size="0.010"/>
+            </body>
+          </body>
+        </body>
+      </body>
+
+    </body>
+  </worldbody>
+
+  <!-- ================= ACTUATORS (12x MG995 POSITION CONTROL) ================= -->
+  <actuator>
+    <!-- FL Leg -->
+    <position name="fl_hip"   joint="fl_hip_joint"   ctrlrange="-0.80 0.80" forcerange="-1.0 1.0"/>
+    <position name="fl_thigh" joint="fl_thigh_joint" ctrlrange="-0.60 1.30" forcerange="-1.0 1.0"/>
+    <position name="fl_knee"  joint="fl_knee_joint"  ctrlrange="-0.40 2.00" forcerange="-1.0 1.0"/>
+
+    <!-- FR Leg -->
+    <position name="fr_hip"   joint="fr_hip_joint"   ctrlrange="-0.80 0.80" forcerange="-1.0 1.0"/>
+    <position name="fr_thigh" joint="fr_thigh_joint" ctrlrange="-0.60 1.30" forcerange="-1.0 1.0"/>
+    <position name="fr_knee"  joint="fr_knee_joint"  ctrlrange="-0.40 2.00" forcerange="-1.0 1.0"/>
+
+    <!-- RL Leg -->
+    <position name="rl_hip"   joint="rl_hip_joint"   ctrlrange="-0.80 0.80" forcerange="-1.0 1.0"/>
+    <position name="rl_thigh" joint="rl_thigh_joint" ctrlrange="-0.60 1.30" forcerange="-1.0 1.0"/>
+    <position name="rl_knee"  joint="rl_knee_joint"  ctrlrange="-0.40 2.00" forcerange="-1.0 1.0"/>
+
+    <!-- RR Leg -->
+    <position name="rr_hip"   joint="rr_hip_joint"   ctrlrange="-0.80 0.80" forcerange="-1.0 1.0"/>
+    <position name="rr_thigh" joint="rr_thigh_joint" ctrlrange="-0.60 1.30" forcerange="-1.0 1.0"/>
+    <position name="rr_knee"  joint="rr_knee_joint"  ctrlrange="-0.40 2.00" forcerange="-1.0 1.0"/>
+  </actuator>
+
+  <!-- ================= SENSORS ================= -->
+  <sensor>
+    <!-- IMU Sensors on Base -->
+    <accelerometer name="imu_accel"   site="imu_site"/>
+    <gyro          name="imu_gyro"    site="imu_site"/>
+    <framequat     name="imu_quat"    objtype="site" objname="imu_site"/>
+    <framelinvel   name="base_linvel" objtype="site" objname="imu_site"/>
+    <frameangvel   name="base_angvel" objtype="site" objname="imu_site"/>
+
+    <!-- Joint Positions (12) -->
+    <jointpos joint="fl_hip_joint"   name="fl_hip_pos"/>
+    <jointpos joint="fl_thigh_joint" name="fl_thigh_pos"/>
+    <jointpos joint="fl_knee_joint"  name="fl_knee_pos"/>
+    <jointpos joint="fr_hip_joint"   name="fr_hip_pos"/>
+    <jointpos joint="fr_thigh_joint" name="fr_thigh_pos"/>
+    <jointpos joint="fr_knee_joint"  name="fr_knee_pos"/>
+    <jointpos joint="rl_hip_joint"   name="rl_hip_pos"/>
+    <jointpos joint="rl_thigh_joint" name="rl_thigh_pos"/>
+    <jointpos joint="rl_knee_joint"  name="rl_knee_pos"/>
+    <jointpos joint="rr_hip_joint"   name="rr_hip_pos"/>
+    <jointpos joint="rr_thigh_joint" name="rr_thigh_pos"/>
+    <jointpos joint="rr_knee_joint"  name="rr_knee_pos"/>
+
+    <!-- Joint Velocities (12) -->
+    <jointvel joint="fl_hip_joint"   name="fl_hip_vel"/>
+    <jointvel joint="fl_thigh_joint" name="fl_thigh_vel"/>
+    <jointvel joint="fl_knee_joint"  name="fl_knee_vel"/>
+    <jointvel joint="fr_hip_joint"   name="fr_hip_vel"/>
+    <jointvel joint="fr_thigh_joint" name="fr_thigh_vel"/>
+    <jointvel joint="fr_knee_joint"  name="fr_knee_vel"/>
+    <jointvel joint="rl_hip_joint"   name="rl_hip_vel"/>
+    <jointvel joint="rl_thigh_joint" name="rl_thigh_vel"/>
+    <jointvel joint="rl_knee_joint"  name="rl_knee_vel"/>
+    <jointvel joint="rr_hip_joint"   name="rr_hip_vel"/>
+    <jointvel joint="rr_thigh_joint" name="rr_thigh_vel"/>
+    <jointvel joint="rr_knee_joint"  name="rr_knee_vel"/>
+
+    <!-- Foot Contact Touch Sensors -->
+    <touch site="fl_foot_site" name="fl_touch"/>
+    <touch site="fr_foot_site" name="fr_touch"/>
+    <touch site="rl_foot_site" name="rl_touch"/>
+    <touch site="rr_foot_site" name="rr_touch"/>
+  </sensor>
+
+  <keyframe>
+    <!-- Nominal Spider Standing: Base at z=0.12m, hips at 0.0, thighs at 0.45 rad down, knees at 0.95 rad down -->
+    <key name="stand"
+         qpos="0 0 0.12 1 0 0 0  0.0 0.45 0.95  0.0 0.45 0.95  0.0 0.45 0.95  0.0 0.45 0.95"
+         ctrl="0.0 0.45 0.95  0.0 0.45 0.95  0.0 0.45 0.95  0.0 0.45 0.95"/>
+  </keyframe>
+</mujoco>

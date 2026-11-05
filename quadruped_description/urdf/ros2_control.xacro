@@ -1,0 +1,55 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <ros2_control name="MujocoSystem" type="system">
+    <hardware>
+      <plugin>mujoco_ros2_control/MujocoSystemInterface</plugin>
+    </hardware>
+
+    <!-- Macro for 1-DOF Revolute Joint Interface -->
+    <xacro:macro name="leg_joint_interface" params="joint_name min_pos:=-1.57 max_pos:=1.57">
+      <joint name="${joint_name}">
+        <command_interface name="position">
+          <param name="min">${min_pos}</param>
+          <param name="max">${max_pos}</param>
+        </command_interface>
+        <state_interface name="position"/>
+        <state_interface name="velocity"/>
+        <state_interface name="effort"/>
+      </joint>
+    </xacro:macro>
+
+    <!-- Front Left Leg (3-DOF Spider) -->
+    <xacro:leg_joint_interface joint_name="fl_hip_joint" min_pos="-0.80" max_pos="0.80"/>
+    <xacro:leg_joint_interface joint_name="fl_thigh_joint" min_pos="-0.60" max_pos="1.30"/>
+    <xacro:leg_joint_interface joint_name="fl_knee_joint" min_pos="-0.40" max_pos="2.00"/>
+
+    <!-- Front Right Leg (3-DOF Spider) -->
+    <xacro:leg_joint_interface joint_name="fr_hip_joint" min_pos="-0.80" max_pos="0.80"/>
+    <xacro:leg_joint_interface joint_name="fr_thigh_joint" min_pos="-0.60" max_pos="1.30"/>
+    <xacro:leg_joint_interface joint_name="fr_knee_joint" min_pos="-0.40" max_pos="2.00"/>
+
+    <!-- Rear Left Leg (3-DOF Spider) -->
+    <xacro:leg_joint_interface joint_name="rl_hip_joint" min_pos="-0.80" max_pos="0.80"/>
+    <xacro:leg_joint_interface joint_name="rl_thigh_joint" min_pos="-0.60" max_pos="1.30"/>
+    <xacro:leg_joint_interface joint_name="rl_knee_joint" min_pos="-0.40" max_pos="2.00"/>
+
+    <!-- Rear Right Leg (3-DOF Spider) -->
+    <xacro:leg_joint_interface joint_name="rr_hip_joint" min_pos="-0.80" max_pos="0.80"/>
+    <xacro:leg_joint_interface joint_name="rr_thigh_joint" min_pos="-0.60" max_pos="1.30"/>
+    <xacro:leg_joint_interface joint_name="rr_knee_joint" min_pos="-0.40" max_pos="2.00"/>
+
+    <!-- IMU Sensor Interface -->
+    <sensor name="imu_sensor">
+      <state_interface name="orientation.x"/>
+      <state_interface name="orientation.y"/>
+      <state_interface name="orientation.z"/>
+      <state_interface name="orientation.w"/>
+      <state_interface name="angular_velocity.x"/>
+      <state_interface name="angular_velocity.y"/>
+      <state_interface name="angular_velocity.z"/>
+      <state_interface name="linear_acceleration.x"/>
+      <state_interface name="linear_acceleration.y"/>
+      <state_interface name="linear_acceleration.z"/>
+    </sensor>
+  </ros2_control>
+</robot>
